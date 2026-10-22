@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Room - Soporte TI</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #07111f;
+    color: #e6faff;
+    text-align: center;
+    padding: 24px 14px;
+  }
+  .panel {
+    max-width: 650px;
+    margin: 20px auto;
+    padding: 28px;
+    border: 1px solid #00e5ff;
+    border-radius: 18px;
+    background: #101f32;
+    box-shadow: 0 0 25px #00e5ff22;
+  }
+  h1 { color: #00e5ff; }
+  h2 { color: #7cffb2; }
+  p { line-height: 1.6; }
+  button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 14px;
+    border: 1px solid #00e5ff;
+    border-radius: 9px;
+    background: #142e43;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button:hover { background: #07536a; }
+  #feedback { min-height: 28px; font-weight: bold; }
+  .progress {
+    color: #7cffb2;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h1>🔐 ESCAPE ROOM TI</h1>
+  <p><b>MISIÓN:</b> ¡El sistema de la empresa ha sido bloqueado!</p>
+  <p>Resuelve los retos de soporte técnico antes de que termine el tiempo.</p>
+  <h2 id="roomTitle">Sala 1: Sin conexión</h2>
+  <p class="progress" id="progress">Reto 1 de 4</p>
+  <p id="question"></p>
+  <div id="answers"></div>
+  <p id="feedback" aria-live="polite"></p>
+  <p id="timer">⏱️ Tiempo: 180 segundos</p>
+  <button id="restart" onclick="restartGame()" hidden>
+    Volver a jugar
+  </button>
+</div>
+
+<script>
+const rooms = [
+  {
+    title: "Sala 1: Sin conexión",
+    question: "Un computador no tiene internet. ¿Qué debes comprobar primero?",
+    answers: [
+      "Revisar la conexión Wi-Fi o el cable de red",
+      "Formatear el computador",
+      "Cambiar el monitor"
+    ],
+    correct: 0
+  },
+  {
+    title: "Sala 2: La impresora rebelde",
+    question: "La impresora no imprime. ¿Cuál es un primer paso razonable?",
+    answers: [
+      "Borrar todos los archivos",
+      "Comprobar energía, conexión y cola de impresión",
+      "Desinstalar todos los programas"
+    ],
+    correct: 1
+  },
+  {
+    title: "Sala 3: Correo sospechoso",
+    question: "Recibes un correo que pide tu contraseña mediante un enlace extraño. ¿Qué haces?",
+    answers: [
+      "Abrir el enlace inmediatamente",
+      "Reenviarlo a todos tus compañeros",
+      "No abrirlo y reportarlo al área de TI"
+    ],
+    correct: 2
+  },
+  {
+    title: "Sala 4: Equipo lento",
+    question: "Un computador está muy lento. ¿Qué conviene hacer primero?",
+    answers: [
+      "Revisar el uso de recursos y las aplicaciones abiertas",
+      "Desconectar el servidor de la empresa",
+      "Eliminar archivos al azar"
+    ],
+    correct: 0
+  }
+];
+
+let current = 0;
+let score = 0;
+let time = 180;
+let finished = false;
+let interval;
+
+const $ = id => document.getElementById(id);
+
+function renderRoom() {
+  const room = rooms[current];
+  $("roomTitle").textContent = room.title;
+  $("progress").textContent =
+    `Reto ${current + 1} de ${rooms.length} | Puntos: ${score}`;
+  $("question").textContent = room.question;
+  $("answers").innerHTML = "";
+  $("feedback").textContent = "";
+
+  room.answers.forEach((answer, index) => {
+    const button = document.createElement("button");
+    button.textContent = answer;
+    button.onclick = () => checkAnswer(index);
+    $("answers").appendChild(button);
+  });
+}
+
+function checkAnswer(index) {
+  if (finished) return;
+
+  if (index === rooms[current].correct) {
+    score += 100;
+    current++;
+
+    if (current === rooms.length) {
+      winGame();
+    } else {
+      $("feedback").textContent = "✅ ¡Correcto! Sala desbloqueada.";
+      renderRoom();
+    }
+  } else {
+    $("feedback").textContent =
+      "❌ Esa no es la mejor opción. Intenta de nuevo.";
+  }
+}
+
+function winGame() {
+  finished = true;
+  clearInterval(interval);
+  $("roomTitle").textContent = "🏆 ¡MISIÓN COMPLETADA!";
+  $("progress").textContent = `Puntuación final: ${score} puntos`;
+  $("question").textContent =
+    "Has recuperado el sistema de la empresa. ¡Eres un héroe del soporte TI!";
+  $("answers").innerHTML =
+    "<h2>🔓 SISTEMA RESTAURADO</h2><p>Código final: TI-2026</p>";
+  $("feedback").textContent = "¡Excelente trabajo, técnico!";
+  $("restart").hidden = false;
+}
+
+function endGame() {
+  finished = true;
+  clearInterval(interval);
+  $("roomTitle").textContent = "⏰ Tiempo agotado";
+  $("question").textContent =
+    "El sistema sigue bloqueado. ¡Inténtalo de nuevo!";
+  $("answers").innerHTML = "";
+  $("feedback").textContent = `Puntuación: ${score}`;
+  $("restart").hidden = false;
+}
+
+function restartGame() {
+  clearInterval(interval);
+  current = 0;
+  score = 0;
+  time = 180;
+  finished = false;
+  $("restart").hidden = true;
+  updateTimer();
+  renderRoom();
+  interval = setInterval(() => {
+    if (finished) return;
+    time--;
+    updateTimer();
+    if (time <= 0) endGame();
+  }, 1000);
+}
+
+function updateTimer() {
+  const minutes = Math.floor(time / 60);
+  const seconds = time % 60;
+  $("timer").textContent =
+    `⏱️ Tiempo: ${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+restartGame();
+</script>
+</body>
